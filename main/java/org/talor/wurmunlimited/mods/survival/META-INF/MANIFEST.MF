@@ -1,3 +1,3 @@
 Manifest-Version: 1.0
-Main-Class: org.gotti.wurmunlimited.mods.survival.Survival
+Main-Class: org.talor.wurmunlimited.mods.survival.Survival
 
