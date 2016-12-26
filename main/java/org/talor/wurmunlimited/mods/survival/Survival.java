@@ -1,6 +1,7 @@
 package org.talor.wurmunlimited.mods.survival;
 
 import com.wurmonline.math.TilePos;
+import com.wurmonline.server.Items;
 import com.wurmonline.server.WurmCalendar;
 import com.wurmonline.server.creatures.Communicator;
 import com.wurmonline.server.items.Item;
@@ -278,6 +279,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             int hour = WurmCalendar.getHour();
             double starfall = WurmCalendar.getStarfall() + ((double) WurmCalendar.getDay() / 28);
             boolean isIndoors = !p.getCurrentTile().isOnSurface() || (p.getCurrentTile().getStructure() != null && p.getCurrentTile().getStructure().isFinished());
+            boolean isOnBoat = p.getVehicle() != (long)-10 && Items.getItem(p.getVehicle()).isBoat();
 
             // Approximation of seasonal heat differences
             // Produces number between -5 and 2
@@ -291,7 +293,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             double windMod = !isIndoors && Math.abs(Server.getWeather().getWindPower()) > 0.3 ? -1 : 0;
 
             // Colder if swimming
-            double swimMod = Zones.calculateHeight(p.getPosX(), p.getPosY(), p.isOnSurface()) < 0 ? -2 : 0;
+            double swimMod = !isOnBoat && Zones.calculateHeight(p.getPosX(), p.getPosY(), p.isOnSurface()) < 0 ? -2 : 0;
 
             // Colder if raining
             double rainMod = !isIndoors && Server.getWeather().getRain() > 0.5 ? -1 : 0;
