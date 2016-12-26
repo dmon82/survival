@@ -51,7 +51,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                         Player p = (Player) object;
                         String message = null;
 
-                        if (!p.isDead() && p.secondsPlayed % 15.0F == 0.0F) {
+                        if (enableTemperatureSurvival && !p.isDead() && p.secondsPlayed % 15.0F == 0.0F) {
 
                             Body b =  p.getBody();
 
