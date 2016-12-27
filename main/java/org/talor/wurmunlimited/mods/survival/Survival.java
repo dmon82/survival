@@ -252,8 +252,10 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                                             break;
                                     }
                                     if (woundPos != (short) 0) {
-                                        int dmg = Server.rand.nextInt(1500);
-                                        p.addWoundOfType(null, (byte) 8, woundPos, false, 1.0F, true, dmg);
+                                        int dmg = Server.rand.nextInt(2000);
+                                        if (p.secondsPlayed % 30.0F == 0.0F) {
+                                            p.addWoundOfType(null, (byte) 8, woundPos, false, 1.0F, true, dmg);
+                                        }
                                        if (warningMessages) {
                                            message = "You are freezing cold! Find warmth quickly.";
                                        }
