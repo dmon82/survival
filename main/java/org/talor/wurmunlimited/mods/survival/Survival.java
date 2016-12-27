@@ -282,12 +282,12 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             boolean isOnBoat = p.getVehicle() != (long)-10 && Items.getItem(p.getVehicle()).isBoat();
 
             // Approximation of seasonal heat differences
-            // Produces number between -5 and 2
-            double monthTempMod = 7 * Math.sin(starfall / 3.82) - 5;
+            // Produces number between -4 and 3
+            double monthTempMod = 7 * Math.sin(starfall / 3.82) - 4;
 
             // Approximation of day/night heat differences
-            // Produces number between -2.5 and 2.5
-            double hourTempMod = 5 * Math.sin((float) hour / 7.65) - 2.5;
+            // Produces number between -2 and 2
+            double hourTempMod = 4 * Math.sin((float) hour / 7.65) - 2;
 
             // Colder if strong wind or gale
             double windMod = !isIndoors && Math.abs(Server.getWeather().getWindPower()) > 0.3 ? -1 : 0;
@@ -299,7 +299,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             double rainMod = !isIndoors && Server.getWeather().getRain() > 0.5 ? -1 : 0;
 
             // Positive value indicates warming, negative value indicates cooling
-            // Produces within a rough range of -7.5 to 4.5
+            // Produces within a rough range of -10 to 5
             short temperatureDelta = (short) (monthTempMod + hourTempMod + windMod + swimMod + rainMod);
 
             System.out.println(p.getName() + " has following modifiers... calendar mod: " + monthTempMod + ", day/night mod: " + hourTempMod + ", windMod : " + windMod + ", swimMod: " + swimMod + ", rainMod: " + rainMod + ", indoors: " + isIndoors);
