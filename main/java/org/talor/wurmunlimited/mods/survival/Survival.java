@@ -319,7 +319,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             for (TilePos tPos : TilePos.areaIterator(x1, y1, x2, y2)) {
                 int xx = tPos.x;
                 yy = tPos.y;
-                VolaTile t = Zones.getTileOrNull(xx, yy, true);
+                VolaTile t = Zones.getTileOrNull(xx, yy, p.isOnSurface());
                 if ((t != null)) {
                     for (Item item : t.getItems()) {
                         short effectiveTemperature = 0;
