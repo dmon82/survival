@@ -180,6 +180,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
 
         try {
 
+            boolean urgentAlert = false;
             short totalTemperature = 0;
             short countBodyParts = 0;
             String message = null;
@@ -201,6 +202,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                                 if (warningMessages && itemarr[y].getTemperature() < 50) {
                                     if (message == null) {
                                         message = "You are very cold and should find warmth";
+                                        urgentAlert = true;
                                     }
                                 }
                             } else {
@@ -258,6 +260,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                                         }
                                        if (warningMessages) {
                                            message = "You are freezing cold! Find warmth quickly.";
+                                           urgentAlert = true;
                                        }
                                     }
                                 }
@@ -266,7 +269,9 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                     }
                 }
             }
-            if (message != null) {
+            if (urgentAlert && message != null) {
+                p.getCommunicator().sendNormalServerMessage(message, (byte)4);
+            } else if (message != null) {
                 p.getCommunicator().sendNormalServerMessage(message);
             }
             return (short) (totalTemperature/countBodyParts);
