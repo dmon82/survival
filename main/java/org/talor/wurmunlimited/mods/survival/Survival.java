@@ -243,6 +243,19 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                                 armourSwimBonus = 1;
                                 break;
                         }
+
+                        switch (armour.getTemplateId()) {
+                            case 960:   // Leather adventurer's hat
+                                armourRainBonus = 0.75;
+                                break;
+                            case 959:   // Brown bear helm
+                                armourGeneralBonus = 1;
+                                armourRainBonus = 0.25;
+                                armourWindBonus = 0;
+                                armourSwimBonus = 1;
+                                break;
+                        }
+
                         if (verboseLogging) logger.log(Level.INFO, player.getName() + " - " + bodyPart.getName() + "(" + temperature + ") slot: " + armour.getName());
                     }
 
@@ -365,6 +378,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                         // Closer heat sources provide more heat. Uses pythagorean theorem to find distance, then uses inverse square law to determine intensity
                         if (item.isOnFire()) {
                             effectiveTemperature = (short) (item.getTemperature() * (1 / Math.pow(Math.max(1, Math.sqrt(Math.pow(Math.abs(tileX - xx), 2) + Math.pow(Math.abs(tileY - yy), 2))),2)));
+                            effectiveTemperature = item.isLight() ? (short)Math.round(effectiveTemperature/6) : effectiveTemperature;
                         }
                         // Only pay attention to the heat sources providing the biggest effect (i.e. heat sources do not stack)
                         if (effectiveTemperature > targetTemperature) {
@@ -374,7 +388,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                 }
             }
             // Add warming effect from heat source
-            baseTemperatureDelta += (short) Math.ceil(Math.min((double)7,(double) targetTemperature / (double)1800));
+            baseTemperatureDelta += (short) Math.round(Math.min((double)7,(double) targetTemperature / (double)1800));
 
             return new TempEffects(baseTemperatureDelta, swimMod, windMod, rainMod);
         } catch (Exception e) {
