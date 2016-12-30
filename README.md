@@ -2,7 +2,7 @@
 
 * You can freeze to death
 * Winter, night, strong winds, rain & swimming make you colder
-* Summer, daytime, fire & being indoors can keep you warm
+* Summer, daytime, fire, warm clothes & being indoors can keep you warm
 
 ## Usage
 

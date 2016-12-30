@@ -71,10 +71,10 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
 
                         if (enableTemperatureSurvival && !(player.hasSpellEffect((byte) 75) && newPlayerProtection) && !(player.getPower() >= 2 && gmProtection) && !player.isDead() && player.secondsPlayed % 15.0F == 0.0F) {
 
-                            // Fetches temperature effects for Player p
+                            // Fetches temperature effects for the polled player
                             TempEffects temperatureEffects = getTemperatureEffects(player);
 
-                            // Cycles through body parts for Player p and applies cooling/warming and frost wounds where appropriate
+                            // Cycles through body parts for the polled player and applies cooling/warming and frost wounds where appropriate
                             pollBodyPartTemperature(player, true, true, temperatureEffects);
                         }
 
@@ -313,13 +313,13 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
         try {
             int hour = WurmCalendar.getHour();
             int day = (int)(WurmCalendar.currentTime % (long)29030400 / (long)86400);
-            double starfall = (double)WurmCalendar.getStarfall() + ((double)day / (double)28);
+            double starfall = (double)WurmCalendar.getStarfall() + ((double)day%28 / (double)28);
             boolean isIndoors = !player.getCurrentTile().isOnSurface() || (player.getCurrentTile().getStructure() != null && player.getCurrentTile().getStructure().isFinished());
             boolean isOnBoat = player.getVehicle() != (long)-10 && Items.getItem(player.getVehicle()).isBoat();
-
+            
             // Approximation of seasonal heat differences
             // Produces number between -4 and 3
-            double monthTempMod = 7 * Math.sin(starfall / 3.82) - 4;
+            double monthTempMod = 7 * Math.sin(starfall / 3.84) - 4;
 
             // Approximation of day/night heat differences
             // Produces number between -2 and 2
