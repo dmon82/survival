@@ -316,7 +316,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             double starfall = (double)WurmCalendar.getStarfall() + ((double)day%28 / (double)28);
             boolean isIndoors = !player.getCurrentTile().isOnSurface() || (player.getCurrentTile().getStructure() != null && player.getCurrentTile().getStructure().isFinished());
             boolean isOnBoat = player.getVehicle() != (long)-10 && Items.getItem(player.getVehicle()).isBoat();
-            
+
             // Approximation of seasonal heat differences
             // Produces number between -4 and 3
             double monthTempMod = 7 * Math.sin(starfall / 3.84) - 4;
@@ -362,9 +362,9 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                 if ((t != null)) {
                     for (Item item : t.getItems()) {
                         short effectiveTemperature = 0;
-                        // Closer heat sources provide more heat. For added realism, could be changed to use inverse square law, but currently using linear function.
+                        // Closer heat sources provide more heat. Uses pythagorean theorem to find distance, then uses inverse square law to determine intensity
                         if (item.isOnFire()) {
-                            effectiveTemperature = (short) (item.getTemperature() / Math.max(1, Math.sqrt(Math.pow(Math.abs(tileX - xx), 2) + Math.pow(Math.abs(tileY - yy), 2))));
+                            effectiveTemperature = (short) (item.getTemperature() * (1 / Math.pow(Math.max(1, Math.sqrt(Math.pow(Math.abs(tileX - xx), 2) + Math.pow(Math.abs(tileY - yy), 2))),2)));
                         }
                         // Only pay attention to the heat sources providing the biggest effect (i.e. heat sources do not stack)
                         if (effectiveTemperature > targetTemperature) {
@@ -374,7 +374,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                 }
             }
             // Add warming effect from heat source
-            baseTemperatureDelta += (short) Math.ceil(Math.min((double)7,(double) targetTemperature / (double)1200));
+            baseTemperatureDelta += (short) Math.ceil(Math.min((double)7,(double) targetTemperature / (double)1800));
 
             return new TempEffects(baseTemperatureDelta, swimMod, windMod, rainMod);
         } catch (Exception e) {
