@@ -331,7 +331,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
 
             // Colder if swimming
             // Produces -2 or 0
-            short swimMod = !isOnBoat && Zones.calculateHeight(player.getPosX(), player.getPosY(), player.isOnSurface()) < 0 ? (short)-2 : 0;
+            short swimMod = !isOnBoat && Zones.calculateHeight(player.getPosX(), player.getPosY(), player.isOnSurface()) < 0 ? (short)-3 : 0;
 
             // Colder if raining
             // Produces -1 or 0
