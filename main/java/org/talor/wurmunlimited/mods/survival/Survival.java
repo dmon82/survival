@@ -3,10 +3,12 @@ package org.talor.wurmunlimited.mods.survival;
 import com.wurmonline.math.TilePos;
 import com.wurmonline.server.Items;
 import com.wurmonline.server.WurmCalendar;
+import com.wurmonline.server.behaviours.Action;
 import com.wurmonline.server.behaviours.Vehicle;
 import com.wurmonline.server.behaviours.Vehicles;
 import com.wurmonline.server.bodys.BodyTemplate;
 import com.wurmonline.server.creatures.Communicator;
+import com.wurmonline.server.creatures.Creature;
 import com.wurmonline.server.creatures.NoArmourException;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.NoSpaceException;
@@ -195,10 +197,76 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                 };
             }
         });
+
+        HookManager.getInstance().registerHook("com.wurmonline.server.behaviours.MethodsItems", "eat", "(Lcom/wurmonline/server/behaviours/Action;Lcom/wurmonline/server/creatures/Creature;Lcom/wurmonline/server/items/Item;F)Z", new InvocationHandlerFactory() {
+
+            @Override
+            public InvocationHandler createInvocationHandler () {
+                return new InvocationHandler() {
+
+                    @Override
+                    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+
+                        Boolean result = (Boolean) method.invoke(proxy, args);
+
+                        Action act = (Action) args[0];
+                        Creature player = (Creature) args[1];
+                        Item food = (Item) args[2];
+
+                        if (!result && player.isPlayer() && act.currentSecond() % 5 == 0 && food.getTemperature() > 1000) {
+                            warmAllBodyParts((Player)player, (short)5);
+                            player.getCommunicator().sendNormalServerMessage("The " + food.getName() + " warms you up.");
+                            if (verboseLogging) logger.log(Level.INFO, player.getName() + " is warmed by eating some " + food.getName());
+                        }
+                        return result;
+                    }
+                };
+            }
+        });
+
+        HookManager.getInstance().registerHook("com.wurmonline.server.behaviours.MethodsItems", "drink", "(Lcom/wurmonline/server/behaviours/Action;Lcom/wurmonline/server/creatures/Creature;Lcom/wurmonline/server/items/Item;F)Z", new InvocationHandlerFactory() {
+
+            @Override
+            public InvocationHandler createInvocationHandler () {
+                return new InvocationHandler() {
+
+                    @Override
+                    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+
+                        Boolean result = (Boolean) method.invoke(proxy, args);
+
+                        Action act = (Action) args[0];
+                        Creature player = (Creature) args[1];
+                        Item drink = (Item) args[2];
+
+                        if (!result && player.isPlayer() && act.currentSecond() % 2 == 0 && drink.getTemperature() > 600) {
+                            warmAllBodyParts((Player)player, (short)5);
+                            player.getCommunicator().sendNormalServerMessage("The " + drink.getName() + " warms you up.");
+                            if (verboseLogging) logger.log(Level.INFO, player.getName() + " is warmed by drinking some " + drink.getName());
+                        }
+                        return result;
+                    }
+                };
+            }
+        });
+
     }
 
+    private void warmAllBodyParts(Player player, short change) {
 
-    private TempEffects pollBodyPartTemperature(Player player, boolean applyWounds, boolean warningMessages, TempEffects tempEffects) {
+        Body body = player.getBody();
+
+        for(byte y : bodyParts ) {
+            try {
+                Item bodyPart = body.getBodyPart(y);
+                bodyPart.setTemperature((short)(bodyPart.getTemperature() + change));
+            } catch (NoSpaceException nse) {
+                logger.log(Level.WARNING, nse.getMessage());
+            }
+        }
+    }
+
+    private TempEffects pollBodyPartTemperature(Player player, boolean applyTemperatureAndWounds, boolean warningMessages, TempEffects tempEffects) {
 
         try {
             String message = null;
@@ -273,7 +341,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                         if (verboseLogging) logger.log(Level.INFO, player.getName() + " - " + bodyPart.getName() + "(" + temperature + ") slot: " + armour.getName());
                     }
 
-                    armourEffects = armourGeneralBonus + Math.min(0,(double)tempEffects.swimMod + armourSwimBonus) + Math.min(0,(double)tempEffects.rainMod + armourRainBonus) + Math.min(0, (double)tempEffects.windMod + armourWindBonus);
+                    armourEffects = armourGeneralBonus + Math.min(0,(double)tempEffects.swimMod + armourSwimBonus) + Math.min(0,(double)tempEffects.rainMod + armourRainBonus) + Math.min(0, (double)tempEffects.windMod + armourWindBonus) + (double) tempEffects.altitudeMod;
 
                     // Apply temperature
                     double doubleDelta = tempEffects.baseTemperatureDelta + armourEffects ;
@@ -284,7 +352,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
 
                     if (verboseLogging) logger.log(Level.INFO, player.getName() + " - double delta: " + doubleDelta + " rounded to " + temperatureDelta);
 
-                    bodyPart.setTemperature(temperature);
+                    if (applyTemperatureAndWounds) bodyPart.setTemperature(temperature);
                     totalTemperature+= temperature;
                     countBodyParts++;
 
@@ -303,7 +371,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                     }
 
                     // Give the player some cold wounds if they are freezing and display a warning message
-                    if (applyWounds && temperature == 0) {
+                    if (applyTemperatureAndWounds && temperature == 0) {
                         if (Server.rand.nextInt(1000) > 750) {
                             int dmg = Server.rand.nextInt(2000);
                             // Only apply wounds every other poll
@@ -351,7 +419,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             }
 
             // Approximation of seasonal heat differences
-            // Produces number between -4 and 3
+            // Produces number between -4 and 4
             double monthTempMod = 4 * Math.sin((starfall - 3) / 1.91);
 
             // Approximation of day/night heat differences
@@ -370,11 +438,15 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             // Produces -1 or 0
             short rainMod = !isIndoors && Server.getWeather().getRain() > 0.5 ? (short)-1 : 0;
 
+            // Colder at very high altitudes
+            // Produces -1 or 0
+            short altitudeMod = Zones.calculateHeight(player.getPosX(), player.getPosY(), player.isOnSurface()) > 180 ? (short)-1 : 0;
+
             // Positive value indicates warming, negative value indicates cooling
             // Produces within a rough range of -10 to 5
             double baseTemperatureDelta = monthTempMod + hourTempMod;
 
-            if (verboseLogging) logger.log(Level.INFO, player.getName() + " has following modifiers... calendar mod: " + monthTempMod + ", day/night mod: " + hourTempMod + ", windMod : " + windMod + ", swimMod: " + swimMod + ", rainMod: " + rainMod + ", indoors: " + isIndoors);
+            if (verboseLogging) logger.log(Level.INFO, player.getName() + " has following modifiers... calendar mod: " + monthTempMod + ", day/night mod: " + hourTempMod + ", windMod : " + windMod + ", swimMod: " + swimMod + ", rainMod: " + rainMod +", altitudeMod: " + altitudeMod + ", indoors: " + isIndoors);
 
             // Search nearby for heat sources
             int tileX = player.getCurrentTile().getTileX();
@@ -410,7 +482,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             // Add warming effect from heat source
             baseTemperatureDelta += (short) Math.round(Math.min((double)7,(double) targetTemperature / (double)1800));
 
-            return new TempEffects(baseTemperatureDelta, swimMod, windMod, rainMod);
+            return new TempEffects(baseTemperatureDelta, swimMod, windMod, rainMod, altitudeMod);
         } catch (Exception e) {
             logger.log(Level.WARNING, e.getMessage());
             return null;

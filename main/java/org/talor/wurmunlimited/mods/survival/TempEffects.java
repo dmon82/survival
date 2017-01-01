@@ -6,14 +6,16 @@ public class TempEffects {
     public short swimMod;
     public short windMod;
     public short rainMod;
+    public short altitudeMod;
     public short averageModifiedTemperatureDelta;
     public short averageTemperature;
 
-    public TempEffects(double b, short s, short w, short r) {
+    public TempEffects(double b, short s, short w, short r, short a) {
         baseTemperatureDelta = b;
         swimMod = s;
         windMod = w;
         rainMod = r;
+        altitudeMod = a;
     }
 
 }
