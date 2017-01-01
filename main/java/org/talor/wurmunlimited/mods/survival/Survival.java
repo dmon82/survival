@@ -340,7 +340,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
 
     private TempEffects getTemperatureEffects(Player player) {
         try {
-            int hour = WurmCalendar.getHour();
+            double hour = (double)WurmCalendar.getHour();
             int day = (int)(WurmCalendar.currentTime % (long)29030400 / (long)86400);
             double starfall = (double)WurmCalendar.getStarfall() + ((double)day%28 / (double)28);
             boolean isIndoors = !player.getCurrentTile().isOnSurface() || (player.getCurrentTile().getStructure() != null && player.getCurrentTile().getStructure().isFinished());
@@ -352,11 +352,11 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
 
             // Approximation of seasonal heat differences
             // Produces number between -4 and 3
-            double monthTempMod = 7 * Math.sin(starfall / 3.84) - 4;
+            double monthTempMod = 4 * Math.sin((starfall - 3) / 1.91);
 
             // Approximation of day/night heat differences
             // Produces number between -2 and 2
-            double hourTempMod = 4 * Math.sin((float) hour / 7.65) - 2;
+            double hourTempMod = 2 * Math.sin((hour - 6)/3.82);
 
             // Colder if strong wind or gale
             // Produces -1 or 0
