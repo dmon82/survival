@@ -271,7 +271,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                     short temperatureDelta = (short) Math.round(doubleDelta);
                     totalTemperatureDelta = totalTemperatureDelta + temperatureDelta;
 
-                    temperature = (short) Math.min(2500, Math.max(0, Math.round(temperature + temperatureDelta)));
+                    temperature = (short) Math.min(250, Math.max(0, Math.round(temperature + temperatureDelta)));
 
                     if (verboseLogging) logger.log(Level.INFO, player.getName() + " - double delta: " + doubleDelta + " rounded to " + temperatureDelta);
 
