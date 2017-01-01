@@ -3,6 +3,8 @@ package org.talor.wurmunlimited.mods.survival;
 import com.wurmonline.math.TilePos;
 import com.wurmonline.server.Items;
 import com.wurmonline.server.WurmCalendar;
+import com.wurmonline.server.behaviours.Vehicle;
+import com.wurmonline.server.behaviours.Vehicles;
 import com.wurmonline.server.bodys.BodyTemplate;
 import com.wurmonline.server.creatures.Communicator;
 import com.wurmonline.server.creatures.NoArmourException;
@@ -333,7 +335,11 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             int day = (int)(WurmCalendar.currentTime % (long)29030400 / (long)86400);
             double starfall = (double)WurmCalendar.getStarfall() + ((double)day%28 / (double)28);
             boolean isIndoors = !player.getCurrentTile().isOnSurface() || (player.getCurrentTile().getStructure() != null && player.getCurrentTile().getStructure().isFinished());
-            boolean isOnBoat = player.getVehicle() != (long)-10 && Items.getItem(player.getVehicle()).isBoat();
+            boolean isOnBoat = false;
+            if (player.getVehicle() != (long)-10) {
+                Vehicle vehicle = Vehicles.getVehicleForId(player.getVehicle());
+                if (!vehicle.isCreature() && Items.getItem(player.getVehicle()).isBoat()) isOnBoat = true;
+            }
 
             // Approximation of seasonal heat differences
             // Produces number between -4 and 3
