@@ -264,13 +264,16 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                                 break;
                         }
 
-                        // Half the effect from armour comes from the type, the other half is dependent on the quality.
-                        armourEffects = armourGeneralBonus + Math.min(0,(double)tempEffects.swimMod + armourSwimBonus) + Math.min(0,(double)tempEffects.rainMod + armourRainBonus) + Math.min(0, (double)tempEffects.windMod + armourWindBonus);
-                        armourEffects = (armourEffects * 0.4) + (armourEffects * 0.6 * (armour.getCurrentQualityLevel() / 100));
+                        // Higher quality clothing gives better bonuses
+                        armourGeneralBonus   = (armourGeneralBonus * 0.4) + (armourGeneralBonus * 0.6 * (armour.getCurrentQualityLevel()/100));
+                        armourRainBonus      = (armourRainBonus * 0.4) + (armourRainBonus * 0.6 * (armour.getCurrentQualityLevel()/100));
+                        armourWindBonus      = (armourWindBonus * 0.4) + (armourWindBonus * 0.6 * (armour.getCurrentQualityLevel()/100));
+                        armourSwimBonus      = (armourSwimBonus * 0.4) + (armourSwimBonus * 0.6 * (armour.getCurrentQualityLevel()/100));
 
                         if (verboseLogging) logger.log(Level.INFO, player.getName() + " - " + bodyPart.getName() + "(" + temperature + ") slot: " + armour.getName());
                     }
 
+                    armourEffects = armourGeneralBonus + Math.min(0,(double)tempEffects.swimMod + armourSwimBonus) + Math.min(0,(double)tempEffects.rainMod + armourRainBonus) + Math.min(0, (double)tempEffects.windMod + armourWindBonus);
 
                     // Apply temperature
                     double doubleDelta = tempEffects.baseTemperatureDelta + armourEffects ;
