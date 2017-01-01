@@ -219,6 +219,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                     double armourSwimBonus = 0;
                     double armourWindBonus = 0;
                     double armourRainBonus = 0;
+                    double armourEffects = 0;
 
                     try{
                         armour = player.getArmour(y);
@@ -263,11 +264,16 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                                 break;
                         }
 
+                        // Half the effect from armour comes from the type, the other half is dependent on the quality.
+                        armourEffects = armourGeneralBonus + Math.min(0,(double)tempEffects.swimMod + armourSwimBonus) + Math.min(0,(double)tempEffects.rainMod + armourRainBonus) + Math.min(0, (double)tempEffects.windMod + armourWindBonus);
+                        armourEffects = (armourEffects * 0.4) + (armourEffects * 0.6 * (armour.getCurrentQualityLevel() / 100));
+
                         if (verboseLogging) logger.log(Level.INFO, player.getName() + " - " + bodyPart.getName() + "(" + temperature + ") slot: " + armour.getName());
                     }
 
+
                     // Apply temperature
-                    double doubleDelta = tempEffects.baseTemperatureDelta + armourGeneralBonus + Math.min(0,(double)tempEffects.swimMod + armourSwimBonus) + Math.min(0,(double)tempEffects.rainMod + armourRainBonus) + Math.min(0, (double)tempEffects.windMod + armourWindBonus);
+                    double doubleDelta = tempEffects.baseTemperatureDelta + armourEffects ;
                     short temperatureDelta = (short) Math.round(doubleDelta);
                     totalTemperatureDelta = totalTemperatureDelta + temperatureDelta;
 
