@@ -408,6 +408,8 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
 
     private TempEffects getTemperatureEffects(Player player) {
         try {
+            int tileX = player.getCurrentTile().getTileX();
+            int tileY = player.getCurrentTile().getTileY();
             double hour = (double)WurmCalendar.getHour();
             int day = (int)(WurmCalendar.currentTime % (long)29030400 / (long)86400);
             double starfall = (double)WurmCalendar.getStarfall() + ((double)day%28 / (double)28);
@@ -446,11 +448,11 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             // Produces within a rough range of -10 to 5
             double baseTemperatureDelta = monthTempMod + hourTempMod;
 
-            if (verboseLogging) logger.log(Level.INFO, player.getName() + " has following modifiers... calendar mod: " + monthTempMod + ", day/night mod: " + hourTempMod + ", windMod : " + windMod + ", swimMod: " + swimMod + ", rainMod: " + rainMod +", altitudeMod: " + altitudeMod + ", indoors: " + isIndoors);
+            // Make PVP servers warmer
+            if(Zones.isOnPvPServer(tileX,tileY)) baseTemperatureDelta++;
+            if (verboseLogging) logger.log(Level.INFO, player.getName() + " has following modifiers... calendar mod: " + monthTempMod + ", day/night mod: " + hourTempMod + ", windMod : " + windMod + ", swimMod: " + swimMod + ", rainMod: " + rainMod +", altitudeMod: " + altitudeMod + ", pvp: " + Zones.isOnPvPServer(tileX,tileY) + ", indoors: " + isIndoors);
 
             // Search nearby for heat sources
-            int tileX = player.getCurrentTile().getTileX();
-            int tileY = player.getCurrentTile().getTileY();
             int yy;
             int dist = 5; // area to check for heat sources
             int x1 = Zones.safeTileX(tileX - dist);
