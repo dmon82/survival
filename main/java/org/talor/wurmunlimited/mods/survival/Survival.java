@@ -38,6 +38,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
     private boolean newPlayerProtection = false;
     private boolean gmProtection = true;
     private boolean verboseLogging = false;
+    private boolean hardMode = false;
 
     // List of body parts
     private byte[] bodyParts =  new byte[] { BodyTemplate.head, BodyTemplate.torso, BodyTemplate.leftArm, BodyTemplate.leftHand, BodyTemplate.rightArm, BodyTemplate.rightHand, BodyTemplate.legs, BodyTemplate.leftFoot, BodyTemplate.rightFoot  };
@@ -53,6 +54,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
         newPlayerProtection = Boolean.parseBoolean(properties.getProperty("newPlayerProtection", Boolean.toString(newPlayerProtection)));
         verboseLogging = Boolean.parseBoolean(properties.getProperty("verboseLogging", Boolean.toString(verboseLogging)));
         gmProtection = Boolean.parseBoolean(properties.getProperty("gmProtection", Boolean.toString(gmProtection)));
+        hardMode = Boolean.parseBoolean(properties.getProperty("hardMode", Boolean.toString(hardMode)));
 	}
 
 	@Override
@@ -448,9 +450,9 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             // Produces within a rough range of -10 to 5
             double baseTemperatureDelta = monthTempMod + hourTempMod;
 
-            // Make PVP servers warmer
-            if(Zones.isOnPvPServer(tileX,tileY)) baseTemperatureDelta++;
-            if (verboseLogging) logger.log(Level.INFO, player.getName() + " has following modifiers... calendar mod: " + monthTempMod + ", day/night mod: " + hourTempMod + ", windMod : " + windMod + ", swimMod: " + swimMod + ", rainMod: " + rainMod +", altitudeMod: " + altitudeMod + ", pvp: " + Zones.isOnPvPServer(tileX,tileY) + ", indoors: " + isIndoors);
+            // Make it warmer if hardMode is disabled
+            if(!hardMode) baseTemperatureDelta++;
+            if (verboseLogging) logger.log(Level.INFO, player.getName() + " has following modifiers... calendar mod: " + monthTempMod + ", day/night mod: " + hourTempMod + ", windMod : " + windMod + ", swimMod: " + swimMod + ", rainMod: " + rainMod +", altitudeMod: " + altitudeMod + ", hardMode: " + hardMode + ", indoors: " + isIndoors);
 
             // Search nearby for heat sources
             int yy;
