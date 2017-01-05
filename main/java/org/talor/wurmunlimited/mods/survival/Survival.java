@@ -1,6 +1,7 @@
 package org.talor.wurmunlimited.mods.survival;
 
 import com.wurmonline.math.TilePos;
+import com.wurmonline.mesh.Tiles;
 import com.wurmonline.server.Items;
 import com.wurmonline.server.WurmCalendar;
 import com.wurmonline.server.behaviours.Action;
@@ -343,7 +344,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                         if (verboseLogging) logger.log(Level.INFO, player.getName() + " - " + bodyPart.getName() + "(" + temperature + ") slot: " + armour.getName());
                     }
 
-                    armourEffects = armourGeneralBonus + Math.min(0,(double)tempEffects.swimMod + armourSwimBonus) + Math.min(0,(double)tempEffects.rainMod + armourRainBonus) + Math.min(0, (double)tempEffects.windMod + armourWindBonus) + (double) tempEffects.altitudeMod;
+                    armourEffects = armourGeneralBonus + Math.min(0,(double)tempEffects.swimMod + armourSwimBonus) + Math.min(0,(double)tempEffects.rainMod + armourRainBonus) + Math.min(0, (double)tempEffects.windMod + armourWindBonus) + (double) tempEffects.altitudeMod + (double) tempEffects.tileMod;
 
                     // Apply temperature
                     double doubleDelta = tempEffects.baseTemperatureDelta + armourEffects ;
@@ -389,7 +390,6 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                 } catch (NoSpaceException nse) {
                     logger.log(Level.WARNING, nse.getMessage());
                 }
-
             }
             // Send the message to the events tab
             if (urgentAlert) {
@@ -446,13 +446,17 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             // Produces -1 or 0
             short altitudeMod = Zones.calculateHeight(player.getPosX(), player.getPosY(), player.isOnSurface()) > 180 ? (short)-1 : 0;
 
+            // Colder if on snow tile
+            // Produces -1 or 0
+            short tileMod = (player.isOnSurface() && Tiles.decodeType(Server.surfaceMesh.getTile(tileX, tileY)) == Tiles.Tile.TILE_SNOW.id) ? (short) -1 : 0;
+
             // Positive value indicates warming, negative value indicates cooling
             // Produces within a rough range of -10 to 5
             double baseTemperatureDelta = monthTempMod + hourTempMod;
 
             // Make it warmer if hardMode is disabled
             if(!hardMode) baseTemperatureDelta++;
-            if (verboseLogging) logger.log(Level.INFO, player.getName() + " has following modifiers... calendar mod: " + monthTempMod + ", day/night mod: " + hourTempMod + ", windMod : " + windMod + ", swimMod: " + swimMod + ", rainMod: " + rainMod +", altitudeMod: " + altitudeMod + ", hardMode: " + hardMode + ", indoors: " + isIndoors);
+            if (verboseLogging) logger.log(Level.INFO, player.getName() + " has following modifiers... calendar mod: " + monthTempMod + ", day/night mod: " + hourTempMod + ", windMod : " + windMod + ", swimMod: " + swimMod + ", rainMod: " + rainMod +", altitudeMod: " + altitudeMod + ", tileMod: " + tileMod + ", hardMode: " + hardMode + ", indoors: " + isIndoors);
 
             // Search nearby for heat sources
             int yy;
@@ -486,7 +490,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             // Add warming effect from heat source
             baseTemperatureDelta += (short) Math.round(Math.min((double)7,(double) targetTemperature / (double)1800));
 
-            return new TempEffects(baseTemperatureDelta, swimMod, windMod, rainMod, altitudeMod);
+            return new TempEffects(baseTemperatureDelta, swimMod, windMod, rainMod, altitudeMod, tileMod);
         } catch (Exception e) {
             logger.log(Level.WARNING, e.getMessage());
             return null;

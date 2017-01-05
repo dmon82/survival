@@ -1,8 +1,8 @@
 # Survival mod for Wurm Unlimited
 
 * You can freeze to death
-* Winter, night, strong winds, rain & swimming make you colder
-* Summer, daytime, fire, warm clothes & being indoors can keep you warm
+* Things that keep you warm: Summer, daytime, fires (fireplace/campfire/forge/etc.), being indoors, wearing warm clothing, eating hot food and drinking tea
+* Things that make you cold: Winter, night, strong winds, rain, swimming, high altitudes and standing on snow tiles
 
 ## Usage
 
