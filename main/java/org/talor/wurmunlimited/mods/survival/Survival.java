@@ -24,6 +24,7 @@ import org.gotti.wurmunlimited.modloader.interfaces.*;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.util.Iterator;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -35,6 +36,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
 
     // Configuration default values
     private boolean enableTemperatureSurvival = true;
+    private boolean enableWaterDisease = true;
     private boolean newPlayerProtection = false;
     private boolean gmProtection = true;
     private boolean verboseLogging = false;
@@ -51,10 +53,12 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
 	public void configure(Properties properties) {
         // Check .properties file for configuration values
         enableTemperatureSurvival = Boolean.parseBoolean(properties.getProperty("enableTemperatureSurvival", Boolean.toString(enableTemperatureSurvival)));
+        enableWaterDisease = Boolean.parseBoolean(properties.getProperty("enableWaterDisease", Boolean.toString(enableWaterDisease)));
         newPlayerProtection = Boolean.parseBoolean(properties.getProperty("newPlayerProtection", Boolean.toString(newPlayerProtection)));
         verboseLogging = Boolean.parseBoolean(properties.getProperty("verboseLogging", Boolean.toString(verboseLogging)));
         gmProtection = Boolean.parseBoolean(properties.getProperty("gmProtection", Boolean.toString(gmProtection)));
         hardMode = Boolean.parseBoolean(properties.getProperty("hardMode", Boolean.toString(hardMode)));
+
 	}
 
 	@Override
@@ -215,6 +219,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                         Creature player = (Creature) args[1];
                         Item food = (Item) args[2];
 
+                        // Eating hot food warms the player up
                         if (enableTemperatureSurvival && !result && player.isPlayer() && act.currentSecond() % 5 == 0 && food.getTemperature() > 1000) {
                             warmAllBodyParts((Player)player, (short)5);
                             player.getCommunicator().sendNormalServerMessage("The " + food.getName() + " warms you up.");
@@ -241,11 +246,50 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                         Creature player = (Creature) args[1];
                         Item drink = (Item) args[2];
 
+                        // Drinking hot drinks warms player up
                         if (enableTemperatureSurvival && !result && player.isPlayer() && act.currentSecond() % 2 == 0 && drink.getTemperature() > 600) {
                             warmAllBodyParts((Player)player, (short)5);
                             player.getCommunicator().sendNormalServerMessage("The " + drink.getName() + " warms you up.");
                             if (verboseLogging) logger.log(Level.INFO, player.getName() + " is warmed by drinking some " + drink.getName());
                         }
+
+                        // Drinking low quality water causes disease
+                        if (enableWaterDisease && !(player.hasSpellEffect((byte) 75) && newPlayerProtection) && !(player.getPower() >= 2 && gmProtection) && !result && player.isPlayer() && act.currentSecond() % 2 == 0 && drink.getTemplateId() == 128 && drink.getCurrentQualityLevel() < 100) {
+                            player.setDisease((byte) (100 - drink.getCurrentQualityLevel()));
+                            player.getCommunicator().sendNormalServerMessage("The " + drink.getName() + " tastes bad and you feel ill.");
+                            if (verboseLogging) logger.log(Level.INFO, player.getName() + " contracts a disease by drinking some bad " + drink.getName());
+                        }
+
+                        return result;
+                    }
+                };
+            }
+        });
+
+        HookManager.getInstance().registerHook("com.wurmonline.server.behaviours.MethodsItems", "drink", "(Lcom/wurmonline/server/creatures/Creature;IIIFLcom/wurmonline/server/behaviours/Action;)Z", new InvocationHandlerFactory() {
+
+            @Override
+            public InvocationHandler createInvocationHandler () {
+                return new InvocationHandler() {
+
+                    @Override
+                    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+
+                        Boolean result = (Boolean) method.invoke(proxy, args);
+
+                        Action act = (Action) args[5];
+                        Creature player = (Creature) args[0];
+
+
+                        // Drinking from the ground causes disease
+                        if (enableWaterDisease && !result && player.isPlayer() && act.currentSecond() % 2 == 0 ) {
+                            byte randomByte =  (byte) Server.rand.nextInt(100);
+                            byte diseaseAmount = (int) randomByte > (int) player.getDisease() ? randomByte : player.getDisease();
+                            player.setDisease(diseaseAmount);
+                            player.getCommunicator().sendNormalServerMessage("The water tastes bad and you feel ill.");
+                            if (verboseLogging) logger.log(Level.INFO, player.getName() + " contracts a disease by drinking some bad water.");
+                        }
+
                         return result;
                     }
                 };
@@ -283,6 +327,72 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                             return result;
                         }
 
+                    }
+                };
+            }
+        });
+
+        HookManager.getInstance().registerHook("com.wurmonline.server.behaviours.MethodsItems", "fillContainer", "(Lcom/wurmonline/server/items/Item;Lcom/wurmonline/server/creatures/Creature;)V", new InvocationHandlerFactory() {
+
+            @Override
+            public InvocationHandler createInvocationHandler () {
+                return new InvocationHandler() {
+
+                    @Override
+                    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+
+                        Boolean result = (Boolean) method.invoke(proxy, args);
+
+                        if(enableWaterDisease) {
+                            // Water from the ocean is low quality
+                            Item contained;
+                            Item targetItem = (Item) args[0];
+
+                            for (Iterator<Item> it = targetItem.getItems().iterator(); it.hasNext(); ) {
+                                contained = it.next();
+                                if (((!contained.isFood()) && (!contained.isLiquid())) || (
+                                        (contained.isLiquid()) && (contained.getTemplateId() != 128))) {
+                                    return result;
+                                }
+                                if (contained.isLiquid()) {
+                                    contained.setQualityLevel(Math.max(1, contained.getQualityLevel() - Server.rand.nextInt(10)));
+                                }
+                            }
+                        }
+
+                        return result;
+                    }
+                };
+            }
+        });
+
+        HookManager.getInstance().registerHook("com.wurmonline.server.items.Item", "modTemp", "(Lcom/wurmonline/server/items/Item;IZ)V", new InvocationHandlerFactory() {
+
+            @Override
+            public InvocationHandler createInvocationHandler () {
+                return new InvocationHandler() {
+
+                    @Override
+                    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+
+                        Item item = (Item) args[0];
+                        Item contained;
+                        Boolean result = (Boolean) method.invoke(proxy, args);
+
+                        for (Iterator<Item> it = item.getItems().iterator(); it.hasNext(); ) {
+                            contained = it.next();
+                            if (((!contained.isFood()) && (!contained.isLiquid())) || (
+                                    (contained.isLiquid()) && (contained.getTemplateId() != 128))) {
+                                return result;
+                            }
+
+                            // Boiled water becomes 100 QL
+                            if (enableWaterDisease && contained.getTemperatureState(contained.getTemperature()) == (byte)3 && contained.getCurrentQualityLevel() < 100) {
+                                contained.setQualityLevel(100);
+                            }
+                        }
+
+                        return result;
                     }
                 };
             }
