@@ -2,14 +2,14 @@ package org.talor.wurmunlimited.mods.survival;
 
 import com.wurmonline.math.TilePos;
 import com.wurmonline.mesh.Tiles;
-import com.wurmonline.server.Items;
-import com.wurmonline.server.WurmCalendar;
+import com.wurmonline.server.*;
 import com.wurmonline.server.behaviours.Action;
 import com.wurmonline.server.behaviours.Vehicle;
 import com.wurmonline.server.behaviours.Vehicles;
 import com.wurmonline.server.bodys.BodyTemplate;
 import com.wurmonline.server.creatures.Communicator;
 import com.wurmonline.server.creatures.Creature;
+import com.wurmonline.server.creatures.Creatures;
 import com.wurmonline.server.creatures.NoArmourException;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.NoSpaceException;
@@ -17,7 +17,6 @@ import com.wurmonline.server.zones.VolaTile;
 import com.wurmonline.server.zones.Zones;
 import com.wurmonline.server.bodys.Body;
 import com.wurmonline.server.players.Player;
-import com.wurmonline.server.Server;
 
 import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
 import org.gotti.wurmunlimited.modloader.classhooks.InvocationHandlerFactory;
@@ -216,7 +215,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                         Creature player = (Creature) args[1];
                         Item food = (Item) args[2];
 
-                        if (!result && player.isPlayer() && act.currentSecond() % 5 == 0 && food.getTemperature() > 1000) {
+                        if (enableTemperatureSurvival && !result && player.isPlayer() && act.currentSecond() % 5 == 0 && food.getTemperature() > 1000) {
                             warmAllBodyParts((Player)player, (short)5);
                             player.getCommunicator().sendNormalServerMessage("The " + food.getName() + " warms you up.");
                             if (verboseLogging) logger.log(Level.INFO, player.getName() + " is warmed by eating some " + food.getName());
@@ -242,12 +241,48 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                         Creature player = (Creature) args[1];
                         Item drink = (Item) args[2];
 
-                        if (!result && player.isPlayer() && act.currentSecond() % 2 == 0 && drink.getTemperature() > 600) {
+                        if (enableTemperatureSurvival && !result && player.isPlayer() && act.currentSecond() % 2 == 0 && drink.getTemperature() > 600) {
                             warmAllBodyParts((Player)player, (short)5);
                             player.getCommunicator().sendNormalServerMessage("The " + drink.getName() + " warms you up.");
                             if (verboseLogging) logger.log(Level.INFO, player.getName() + " is warmed by drinking some " + drink.getName());
                         }
                         return result;
+                    }
+                };
+            }
+        });
+
+        HookManager.getInstance().registerHook("com.wurmonline.server.bodys.Body", "createBodyParts", "()V", new InvocationHandlerFactory() {
+
+            @Override
+            public InvocationHandler createInvocationHandler () {
+                return new InvocationHandler() {
+
+                    @Override
+                    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+
+                        Boolean result = (Boolean) method.invoke(proxy, args);
+
+                        if (!enableTemperatureSurvival) return result;
+
+                        // If it is cold, then the player logs in cold.
+                        Body body = (Body)proxy;
+                        try {
+                            Player player = Players.getInstance().getPlayer(body.getOwnerId());
+                            if (player != null) {
+
+                                TempEffects tempEffects = getTemperatureEffects(player);
+                                tempEffects = pollBodyPartTemperature(player, false, false, tempEffects);
+
+                                if (tempEffects.averageModifiedTemperatureDelta < 0) {
+                                    setTempAllBodyParts(body, (short) 90);
+                                }
+                            }
+                            return result;
+                        } catch (NoSuchPlayerException nspe) {
+                            return result;
+                        }
+
                     }
                 };
             }
@@ -263,6 +298,19 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             try {
                 Item bodyPart = body.getBodyPart(y);
                 bodyPart.setTemperature((short)(bodyPart.getTemperature() + change));
+            } catch (NoSpaceException nse) {
+                logger.log(Level.WARNING, nse.getMessage());
+            }
+        }
+    }
+
+
+    private void setTempAllBodyParts(Body body, short temp) {
+
+        for(byte y : bodyParts ) {
+            try {
+                Item bodyPart = body.getBodyPart(y);
+                bodyPart.setTemperature(temp);
             } catch (NoSpaceException nse) {
                 logger.log(Level.WARNING, nse.getMessage());
             }
