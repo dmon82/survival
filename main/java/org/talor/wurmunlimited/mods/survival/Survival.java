@@ -4,6 +4,7 @@ import com.wurmonline.math.TilePos;
 import com.wurmonline.mesh.Tiles;
 import com.wurmonline.server.*;
 import com.wurmonline.server.behaviours.Action;
+import com.wurmonline.server.behaviours.Terraforming;
 import com.wurmonline.server.behaviours.Vehicle;
 import com.wurmonline.server.behaviours.Vehicles;
 import com.wurmonline.server.bodys.BodyTemplate;
@@ -256,7 +257,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                         // Drinking low quality water causes disease
                         if (enableWaterDisease && !(player.hasSpellEffect((byte) 75) && newPlayerProtection) && !(player.getPower() >= 2 && gmProtection) && !result && player.isPlayer() && act.currentSecond() % 2 == 0 && drink.getTemplateId() == 128 && drink.getCurrentQualityLevel() < 100) {
                             player.setDisease((byte) (100 - drink.getCurrentQualityLevel()));
-                            player.getCommunicator().sendNormalServerMessage("The " + drink.getName() + " tastes bad and you feel ill.");
+                            player.getCommunicator().sendNormalServerMessage("The " + drink.getName() + " tastes bad and you feel ill.", (byte)4);
                             if (verboseLogging) logger.log(Level.INFO, player.getName() + " contracts a disease by drinking some bad " + drink.getName());
                         }
 
@@ -286,7 +287,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                             byte randomByte =  (byte) Server.rand.nextInt(100);
                             byte diseaseAmount = (int) randomByte > (int) player.getDisease() ? randomByte : player.getDisease();
                             player.setDisease(diseaseAmount);
-                            player.getCommunicator().sendNormalServerMessage("The water tastes bad and you feel ill.");
+                            player.getCommunicator().sendNormalServerMessage("The water tastes bad and you feel ill.", (byte)4);
                             if (verboseLogging) logger.log(Level.INFO, player.getName() + " contracts a disease by drinking some bad water.");
                         }
 
@@ -398,6 +399,73 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             }
         });
 
+
+        HookManager.getInstance().registerHook("com.wurmonline.server.behaviours.TileBehaviour", "action", "(Lcom/wurmonline/server/behaviours/Action;Lcom/wurmonline/server/creatures/Creature;IIZISF)Z", new InvocationHandlerFactory() {
+
+            @Override
+            public InvocationHandler createInvocationHandler () {
+                return new InvocationHandler() {
+
+                    @Override
+                    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+
+                        Creature creature = (Creature) args[1];
+                        int tileX = (int) args[2];
+                        int tileY = (int) args[3];
+                        int tile = (int) args[5];
+                        short actionType = (short) args[6];
+
+                        Communicator communicator = creature.getCommunicator();
+
+                        // Replaces behaviour for specified action types
+                        switch (actionType) {
+
+                            case 19: // Taste
+                                if (isWater(tile, tileX, tileY, creature.isOnSurface())) {
+                                    communicator.sendNormalServerMessage("The water tastes strange. It might need boiling.");
+                                } else {
+                                    communicator.sendNormalServerMessage("The taste is very dry.");
+                                }
+                                return true;
+
+                        }
+
+
+                        return method.invoke(proxy, args);
+                    }
+                };
+            }
+        });
+
+    }
+
+    private  boolean isWater(int tile, int tilex, int tiley, boolean surfaced) {
+        if (surfaced)
+        {
+            for (int x = 0; x <= 1; x++) {
+                for (int y = 0; y <= 1; y++) {
+                    if (Tiles.decodeHeight(Server.surfaceMesh.getTile(tilex + x, tiley + y)) < 0) {
+                        return true;
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (Tiles.isSolidCave(Tiles.decodeType(tile))) {
+                return false;
+            }
+            for (int x = 0; x <= 1; x++) {
+                for (int y = 0; y <= 1; y++)
+                {
+                    int ttile = Server.caveMesh.getTile(tilex + x, tiley + y);
+                    if (Tiles.decodeHeight(ttile) < 0) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private void warmAllBodyParts(Player player, short change) {
