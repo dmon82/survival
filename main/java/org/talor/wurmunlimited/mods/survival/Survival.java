@@ -14,11 +14,13 @@ import com.wurmonline.server.creatures.Creatures;
 import com.wurmonline.server.creatures.NoArmourException;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.NoSpaceException;
+import com.wurmonline.server.structures.Floor;
 import com.wurmonline.server.zones.VolaTile;
 import com.wurmonline.server.zones.Zones;
 import com.wurmonline.server.bodys.Body;
 import com.wurmonline.server.players.Player;
 
+import com.wurmonline.shared.constants.StructureConstants;
 import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
 import org.gotti.wurmunlimited.modloader.classhooks.InvocationHandlerFactory;
 import org.gotti.wurmunlimited.modloader.interfaces.*;
@@ -42,6 +44,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
     private boolean gmProtection = true;
     private boolean verboseLogging = false;
     private boolean hardMode = false;
+    private boolean noCropsInWinter = true;
 
     // List of body parts
     private byte[] bodyParts =  new byte[] { BodyTemplate.head, BodyTemplate.torso, BodyTemplate.leftArm, BodyTemplate.leftHand, BodyTemplate.rightArm, BodyTemplate.rightHand, BodyTemplate.legs, BodyTemplate.leftFoot, BodyTemplate.rightFoot  };
@@ -59,6 +62,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
         verboseLogging = Boolean.parseBoolean(properties.getProperty("verboseLogging", Boolean.toString(verboseLogging)));
         gmProtection = Boolean.parseBoolean(properties.getProperty("gmProtection", Boolean.toString(gmProtection)));
         hardMode = Boolean.parseBoolean(properties.getProperty("hardMode", Boolean.toString(hardMode)));
+        noCropsInWinter = Boolean.parseBoolean(properties.getProperty("noCropsInWinter", Boolean.toString(noCropsInWinter)));
 
 	}
 
@@ -437,6 +441,29 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             }
         });
 
+        HookManager.getInstance().registerHook("com.wurmonline.server.zones.CropTilePoller", "pollCropTiles", "()V", new InvocationHandlerFactory() {
+
+            @Override
+            public InvocationHandler createInvocationHandler () {
+                return new InvocationHandler() {
+
+                    @Override
+                    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+
+                        int day = (int)(WurmCalendar.currentTime % (long)29030400 / (long)86400);
+                        double starfall = (double)WurmCalendar.getStarfall();
+
+                        // Disable crop growth during most of winter
+                        if (noCropsInWinter && (((double)day%28 >= 8 && starfall == 11) || ((double)day%28 <= 20 && starfall == 0))) {
+                            return null;
+                        }
+
+                        return method.invoke(proxy, args);
+                    }
+                };
+            }
+        });
+
     }
 
     private  boolean isWater(int tile, int tilex, int tiley, boolean surfaced) {
@@ -641,7 +668,9 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             double hour = (double)WurmCalendar.getHour();
             int day = (int)(WurmCalendar.currentTime % (long)29030400 / (long)86400);
             double starfall = (double)WurmCalendar.getStarfall() + ((double)day%28 / (double)28);
-            boolean isIndoors = !player.getCurrentTile().isOnSurface() || (player.getCurrentTile().getStructure() != null && player.getCurrentTile().getStructure().isFinished());
+            boolean isIndoors = player.getCurrentTile().getStructure() != null && player.getCurrentTile().getStructure().isFinished();
+            boolean isInCave = !player.getCurrentTile().isOnSurface();
+            boolean isUnderRoof = hasRoof(player.getCurrentTile());
             boolean isOnBoat = false;
             if (player.getVehicle() != (long)-10) {
                 Vehicle vehicle = Vehicles.getVehicleForId(player.getVehicle());
@@ -658,7 +687,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
 
             // Colder if strong wind or gale
             // Produces -1 or 0
-            short windMod = !isIndoors && Math.abs(Server.getWeather().getWindPower()) > 0.3 ? (short)-1 : 0;
+            short windMod = !(isIndoors || isInCave) && Math.abs(Server.getWeather().getWindPower()) > 0.3 ? (short)-1 : 0;
 
             // Colder if swimming
             // Produces -2 or 0
@@ -666,7 +695,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
 
             // Colder if raining
             // Produces -1 or 0
-            short rainMod = !isIndoors && Server.getWeather().getRain() > 0.5 ? (short)-1 : 0;
+            short rainMod = !(isInCave || isUnderRoof) && Server.getWeather().getRain() > 0.5 ? (short)-1 : 0;
 
             // Colder at very high altitudes
             // Produces -1 or 0
@@ -682,7 +711,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
 
             // Make it warmer if hardMode is disabled
             if(!hardMode) baseTemperatureDelta++;
-            if (verboseLogging) logger.log(Level.INFO, player.getName() + " has following modifiers... calendar mod: " + monthTempMod + ", day/night mod: " + hourTempMod + ", windMod : " + windMod + ", swimMod: " + swimMod + ", rainMod: " + rainMod +", altitudeMod: " + altitudeMod + ", tileMod: " + tileMod + ", hardMode: " + hardMode + ", indoors: " + isIndoors);
+            if (verboseLogging) logger.log(Level.INFO, player.getName() + " has following modifiers... calendar mod: " + monthTempMod + ", day/night mod: " + hourTempMod + ", windMod : " + windMod + ", swimMod: " + swimMod + ", rainMod: " + rainMod + ", altitudeMod: " + altitudeMod + ", tileMod: " + tileMod + ", hardMode: " + hardMode + ", in cave: " + isInCave +  ", indoors: " + isIndoors + ", roof: " + isUnderRoof);
 
             // Search nearby for heat sources
             int yy;
@@ -723,4 +752,16 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
         }
     }
 
+    private boolean hasRoof(VolaTile tile)
+    {
+        Floor[] floors = tile.getFloors();
+        for (Floor floor : floors) {
+            if (floor.isRoof()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }
+
