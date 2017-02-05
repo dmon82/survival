@@ -413,28 +413,29 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                     @Override
                     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 
-                        Creature creature = (Creature) args[1];
-                        int tileX = (int) args[2];
-                        int tileY = (int) args[3];
-                        int tile = (int) args[5];
-                        short actionType = (short) args[6];
+                        if(enableWaterDisease) {
+                            Creature creature = (Creature) args[1];
+                            int tileX = (int) args[2];
+                            int tileY = (int) args[3];
+                            int tile = (int) args[5];
+                            short actionType = (short) args[6];
 
-                        Communicator communicator = creature.getCommunicator();
+                            Communicator communicator = creature.getCommunicator();
 
-                        // Replaces behaviour for specified action types
-                        switch (actionType) {
+                            // Replaces behaviour for specified action types
+                            switch (actionType) {
 
-                            case 19: // Taste
-                                if (isWater(tile, tileX, tileY, creature.isOnSurface())) {
+                                case 19: // Taste
+                                    if (isWater(tile,tileX, tileY, creature.isOnSurface())){
                                     communicator.sendNormalServerMessage("The water tastes strange. It might need boiling.");
-                                } else {
+                                }else{
                                     communicator.sendNormalServerMessage("The taste is very dry.");
                                 }
                                 return true;
 
+                            }
+
                         }
-
-
                         return method.invoke(proxy, args);
                     }
                 };
