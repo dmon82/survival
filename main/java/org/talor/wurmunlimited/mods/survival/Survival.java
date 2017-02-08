@@ -353,14 +353,17 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                             Item contained;
                             Item targetItem = (Item) args[0];
 
-                            for (Iterator<Item> it = targetItem.getItems().iterator(); it.hasNext(); ) {
-                                contained = it.next();
-                                if (((!contained.isFood()) && (!contained.isLiquid())) || (
-                                        (contained.isLiquid()) && (contained.getTemplateId() != 128))) {
-                                    return result;
-                                }
-                                if (contained.isLiquid()) {
-                                    contained.setQualityLevel(Math.max(1, contained.getQualityLevel() - Server.rand.nextInt(10)));
+                            if(!targetItem.isAutoFilled()) {
+
+                                for (Iterator<Item> it = targetItem.getItems().iterator(); it.hasNext(); ) {
+                                    contained = it.next();
+                                    if (((!contained.isFood()) && (!contained.isLiquid())) || (
+                                            (contained.isLiquid()) && (contained.getTemplateId() != 128))) {
+                                        return result;
+                                    }
+                                    if (contained.isLiquid()) {
+                                        contained.setQualityLevel(Math.max(1, contained.getQualityLevel() - Server.rand.nextInt(10)));
+                                    }
                                 }
                             }
                         }
