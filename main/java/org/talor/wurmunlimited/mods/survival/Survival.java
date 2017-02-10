@@ -353,7 +353,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                             Item contained;
                             Item targetItem = (Item) args[0];
 
-                            if(!targetItem.isAutoFilled()) {
+                            if(!targetItem.isAutoFilled() && targetItem.getTemplateId() != 408) {
 
                                 for (Iterator<Item> it = targetItem.getItems().iterator(); it.hasNext(); ) {
                                     contained = it.next();
