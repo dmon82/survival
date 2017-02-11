@@ -287,7 +287,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
 
 
                         // Drinking from the ground causes disease
-                        if (enableWaterDisease && !result && player.isPlayer() && act.currentSecond() % 2 == 0 ) {
+                        if (enableWaterDisease && !(player.hasSpellEffect((byte) 75) && newPlayerProtection) && !(player.getPower() >= 2 && gmProtection) && !result && player.isPlayer() && act.currentSecond() % 2 == 0 ) {
                             byte randomByte =  (byte) Server.rand.nextInt(100);
                             byte diseaseAmount = (int) randomByte > (int) player.getDisease() ? randomByte : player.getDisease();
                             player.setDisease(diseaseAmount);
