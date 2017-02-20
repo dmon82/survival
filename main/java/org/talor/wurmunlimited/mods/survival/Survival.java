@@ -45,6 +45,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
     private boolean verboseLogging = false;
     private boolean hardMode = false;
     private boolean noCropsInWinter = true;
+    private boolean northSouthMode = true;
 
     // List of body parts
     private byte[] bodyParts =  new byte[] { BodyTemplate.head, BodyTemplate.torso, BodyTemplate.leftArm, BodyTemplate.leftHand, BodyTemplate.rightArm, BodyTemplate.rightHand, BodyTemplate.legs, BodyTemplate.leftFoot, BodyTemplate.rightFoot  };
@@ -63,6 +64,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
         gmProtection = Boolean.parseBoolean(properties.getProperty("gmProtection", Boolean.toString(gmProtection)));
         hardMode = Boolean.parseBoolean(properties.getProperty("hardMode", Boolean.toString(hardMode)));
         noCropsInWinter = Boolean.parseBoolean(properties.getProperty("noCropsInWinter", Boolean.toString(noCropsInWinter)));
+        northSouthMode = Boolean.parseBoolean(properties.getProperty("northSouthMode", Boolean.toString(northSouthMode)));
 
 	}
 
@@ -713,9 +715,13 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             // Produces within a rough range of -10 to 5
             double baseTemperatureDelta = monthTempMod + hourTempMod;
 
+            // If northSouthMod is enabled, warmer in the south, colder in the north
+            // -2 at north server border, +2 at south server border
+            if (northSouthMode) baseTemperatureDelta = baseTemperatureDelta + (4 * ((double)tileY / (double)Server.surfaceMesh.getSize()) - 2);
+
             // Make it warmer if hardMode is disabled
             if(!hardMode) baseTemperatureDelta++;
-            if (verboseLogging) logger.log(Level.INFO, player.getName() + " has following modifiers... calendar mod: " + monthTempMod + ", day/night mod: " + hourTempMod + ", windMod : " + windMod + ", swimMod: " + swimMod + ", rainMod: " + rainMod + ", altitudeMod: " + altitudeMod + ", tileMod: " + tileMod + ", hardMode: " + hardMode + ", in cave: " + isInCave +  ", indoors: " + isIndoors + ", roof: " + isUnderRoof);
+            if (verboseLogging) logger.log(Level.INFO, player.getName() + " has following modifiers... calendar mod: " + monthTempMod + ", day/night mod: " + hourTempMod + ", northSouth mod: " + (4 * ((double)tileY /  (double)Server.surfaceMesh.getSize()) - 2)  + ", windMod : " + windMod + ", swimMod: " + swimMod + ", rainMod: " + rainMod + ", altitudeMod: " + altitudeMod + ", tileMod: " + tileMod + ", hardMode: " + hardMode + ", in cave: " + isInCave +  ", indoors: " + isIndoors + ", roof: " + isUnderRoof);
 
             // Search nearby for heat sources
             int yy;
