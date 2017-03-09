@@ -1,12 +1,10 @@
 package org.talor.wurmunlimited.mods.survival;
 
+import com.wurmonline.javaone.MeshIO;
 import com.wurmonline.math.TilePos;
 import com.wurmonline.mesh.Tiles;
 import com.wurmonline.server.*;
-import com.wurmonline.server.behaviours.Action;
-import com.wurmonline.server.behaviours.Terraforming;
-import com.wurmonline.server.behaviours.Vehicle;
-import com.wurmonline.server.behaviours.Vehicles;
+import com.wurmonline.server.behaviours.*;
 import com.wurmonline.server.bodys.BodyTemplate;
 import com.wurmonline.server.creatures.Communicator;
 import com.wurmonline.server.creatures.Creature;
@@ -15,6 +13,7 @@ import com.wurmonline.server.creatures.NoArmourException;
 import com.wurmonline.server.items.Item;
 import com.wurmonline.server.items.NoSpaceException;
 import com.wurmonline.server.structures.Floor;
+import com.wurmonline.server.zones.NoSuchZoneException;
 import com.wurmonline.server.zones.VolaTile;
 import com.wurmonline.server.zones.Zones;
 import com.wurmonline.server.bodys.Body;
@@ -44,7 +43,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
     private boolean gmProtection = true;
     private boolean verboseLogging = false;
     private boolean hardMode = false;
-    private boolean noCropsInWinter = true;
+    private boolean enableCropSeasons = true;
     private boolean northSouthMode = true;
 
     // List of body parts
@@ -63,7 +62,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
         verboseLogging = Boolean.parseBoolean(properties.getProperty("verboseLogging", Boolean.toString(verboseLogging)));
         gmProtection = Boolean.parseBoolean(properties.getProperty("gmProtection", Boolean.toString(gmProtection)));
         hardMode = Boolean.parseBoolean(properties.getProperty("hardMode", Boolean.toString(hardMode)));
-        noCropsInWinter = Boolean.parseBoolean(properties.getProperty("noCropsInWinter", Boolean.toString(noCropsInWinter)));
+        enableCropSeasons = Boolean.parseBoolean(properties.getProperty("enableCropSeasons", Boolean.toString(enableCropSeasons)));
         northSouthMode = Boolean.parseBoolean(properties.getProperty("northSouthMode", Boolean.toString(northSouthMode)));
 
 	}
@@ -447,7 +446,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             }
         });
 
-        HookManager.getInstance().registerHook("com.wurmonline.server.zones.CropTilePoller", "pollCropTiles", "()V", new InvocationHandlerFactory() {
+        HookManager.getInstance().registerHook("com.wurmonline.server.zones.CropTilePoller", "checkForFarmGrowth", "(IIIBBLcom/wurmonline/mesh/MeshIO;Z)V", new InvocationHandlerFactory() {
 
             @Override
             public InvocationHandler createInvocationHandler () {
@@ -456,11 +455,14 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                     @Override
                     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 
-                        int day = (int)(WurmCalendar.currentTime % (long)29030400 / (long)86400);
-                        double starfall = (double)WurmCalendar.getStarfall();
+                        int tileX = (int) args[1];
+                        int tileY = (int) args[2];
+                        byte type = (byte) args[3];
+                        byte aData = (byte) args[4];
 
-                        // Disable crop growth during most of winter
-                        if (noCropsInWinter && (((double)day%28 >= 8 && starfall == 11) || ((double)day%28 <= 20 && starfall == 0))) {
+                        int crop = Crops.getCropNumber(type, aData);
+
+                        if (enableCropSeasons && !isCropInSeason(crop, tileX, tileY)) {
                             return null;
                         }
 
@@ -470,6 +472,52 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             }
         });
 
+
+
+    }
+
+    private boolean isCropInSeason(int crop, int tileX, int tileY) {
+
+        double minGrowTemp;
+
+        switch (crop) {
+
+            case 6: // Potatoes
+            case 9: // Garlic
+            case 10: // Onions
+                minGrowTemp = -1;
+                break;
+
+            case 14: // Carrots
+            case 15: // Cabbage
+            case 17: // Sugar beet
+            case 19: // Peas
+                minGrowTemp = -0.5;
+                break;
+
+            case 4: // Corn
+            case 5: // Pumpkins
+            case 8: // Wemp
+            case 13: // Strawberries
+            case 16: // Tomatoes
+            case 20: // Cucumber
+                minGrowTemp = 0.5;
+                break;
+
+            case 7: // Cotton
+            case 12: // Rice
+                minGrowTemp = 1;
+                break;
+
+            default: // Default growing season. In the south, all but winter. In the north, only during summer.
+                minGrowTemp = 0;
+                break;
+        }
+
+        double simpleTemperature = getSimpleTemperature(tileX, tileY, true);
+        if(verboseLogging) logger.log(Level.INFO, "crop: " + crop + " at temperature " + simpleTemperature + ", min grow temp for this crop is: " + minGrowTemp);
+
+        return simpleTemperature >= minGrowTemp;
     }
 
     private  boolean isWater(int tile, int tilex, int tiley, boolean surfaced) {
@@ -603,7 +651,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                         if (verboseLogging) logger.log(Level.INFO, player.getName() + " - " + bodyPart.getName() + "(" + temperature + ") slot: " + armour.getName());
                     }
 
-                    armourEffects = armourGeneralBonus + Math.min(0,(double)tempEffects.swimMod + armourSwimBonus) + Math.min(0,(double)tempEffects.rainMod + armourRainBonus) + Math.min(0, (double)tempEffects.windMod + armourWindBonus) + (double) tempEffects.altitudeMod + (double) tempEffects.tileMod;
+                    armourEffects = armourGeneralBonus + Math.min(0,(double)tempEffects.swimMod + armourSwimBonus) + Math.min(0,(double)tempEffects.rainMod + armourRainBonus) + Math.min(0, (double)tempEffects.windMod + armourWindBonus) + (double) tempEffects.tileMod;
 
                     // Apply temperature
                     double doubleDelta = tempEffects.baseTemperatureDelta + armourEffects ;
@@ -667,13 +715,46 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
     }
 
 
+    private double getSimpleTemperature(float tileX, float tileY, boolean onSurface) {
+
+        double hour = (double)WurmCalendar.getHour();
+        int day = (int)(WurmCalendar.currentTime % (long)29030400 / (long)86400);
+        double starfall = (double)WurmCalendar.getStarfall() + ((double)day%28 / (double)28);
+
+        // Approximation of seasonal heat differences
+        // Produces number between -4 and 4
+        double monthTempMod = 4 * Math.sin((starfall - 3) / 1.91);
+
+        // Approximation of day/night heat differences
+        // Produces number between -2 and 2
+        double hourTempMod = 2 * Math.sin((hour - 6)/3.82);
+
+        double simpleTemperature = monthTempMod + hourTempMod;
+
+        // If northSouthMod is enabled, warmer in the south, colder in the north
+        // -2 at north server border, +2 at south server border
+        if (northSouthMode) simpleTemperature += (4 * ((double)tileY / (double)Server.surfaceMesh.getSize()) - 2);
+
+        try {
+            // Colder at very high altitudes
+            // At sea level, no modifier. -1 for each 200 above sea level
+            double altitudeMod =  (double) Zones.calculateHeight(tileX, tileY, onSurface) / (double) 200 * (double) -1;
+            simpleTemperature+= altitudeMod;
+            if (verboseLogging)  logger.log(Level.INFO, "month modifier: " + monthTempMod + ", hour modifier: " + hourTempMod + ", altitude modifier: " + altitudeMod + ", north/south modifier: " + (4 * ((double)tileY / (double)Server.surfaceMesh.getSize()) - 2));
+        } catch (NoSuchZoneException nse) {
+            logger.log(Level.WARNING, nse.getMessage());
+            return 0;
+        }
+
+        return simpleTemperature;
+
+    }
+
     private TempEffects getTemperatureEffects(Player player) {
         try {
             int tileX = player.getCurrentTile().getTileX();
             int tileY = player.getCurrentTile().getTileY();
-            double hour = (double)WurmCalendar.getHour();
-            int day = (int)(WurmCalendar.currentTime % (long)29030400 / (long)86400);
-            double starfall = (double)WurmCalendar.getStarfall() + ((double)day%28 / (double)28);
+
             boolean isIndoors = player.getCurrentTile().getStructure() != null && player.getCurrentTile().getStructure().isFinished();
             boolean isInCave = !player.getCurrentTile().isOnSurface();
             boolean isUnderRoof = hasRoof(player.getCurrentTile());
@@ -682,14 +763,6 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                 Vehicle vehicle = Vehicles.getVehicleForId(player.getVehicle());
                 if (!vehicle.isCreature() && Items.getItem(player.getVehicle()).isBoat()) isOnBoat = true;
             }
-
-            // Approximation of seasonal heat differences
-            // Produces number between -4 and 4
-            double monthTempMod = 4 * Math.sin((starfall - 3) / 1.91);
-
-            // Approximation of day/night heat differences
-            // Produces number between -2 and 2
-            double hourTempMod = 2 * Math.sin((hour - 6)/3.82);
 
             // Colder if strong wind or gale
             // Produces -1 or 0
@@ -703,25 +776,17 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             // Produces -1 or 0
             short rainMod = !(isInCave || isUnderRoof) && Server.getWeather().getRain() > 0.5 ? (short)-1 : 0;
 
-            // Colder at very high altitudes
-            // Produces -1 or 0
-            short altitudeMod = Zones.calculateHeight(player.getPosX(), player.getPosY(), player.isOnSurface()) > 180 ? (short)-1 : 0;
-
             // Colder if on snow tile
             // Produces -1 or 0
             short tileMod = (player.isOnSurface() && Tiles.decodeType(Server.surfaceMesh.getTile(tileX, tileY)) == Tiles.Tile.TILE_SNOW.id) ? (short) -1 : 0;
 
             // Positive value indicates warming, negative value indicates cooling
             // Produces within a rough range of -10 to 5
-            double baseTemperatureDelta = monthTempMod + hourTempMod;
-
-            // If northSouthMod is enabled, warmer in the south, colder in the north
-            // -2 at north server border, +2 at south server border
-            if (northSouthMode) baseTemperatureDelta = baseTemperatureDelta + (4 * ((double)tileY / (double)Server.surfaceMesh.getSize()) - 2);
+            double baseTemperatureDelta = getSimpleTemperature(player.getPosX(), player.getPosY(), player.isOnSurface());
 
             // Make it warmer if hardMode is disabled
             if(!hardMode) baseTemperatureDelta++;
-            if (verboseLogging) logger.log(Level.INFO, player.getName() + " has following modifiers... calendar mod: " + monthTempMod + ", day/night mod: " + hourTempMod + ", northSouth mod: " + (4 * ((double)tileY /  (double)Server.surfaceMesh.getSize()) - 2)  + ", windMod : " + windMod + ", swimMod: " + swimMod + ", rainMod: " + rainMod + ", altitudeMod: " + altitudeMod + ", tileMod: " + tileMod + ", hardMode: " + hardMode + ", in cave: " + isInCave +  ", indoors: " + isIndoors + ", roof: " + isUnderRoof);
+            if (verboseLogging) logger.log(Level.INFO, player.getName() + " has following modifiers... northSouth mod: " + (4 * ((double)tileY /  (double)Server.surfaceMesh.getSize()) - 2)  + ", windMod : " + windMod + ", swimMod: " + swimMod + ", rainMod: " + rainMod + ", tileMod: " + tileMod + ", hardMode: " + hardMode + ", in cave: " + isInCave +  ", indoors: " + isIndoors + ", roof: " + isUnderRoof);
 
             // Search nearby for heat sources
             int yy;
@@ -755,7 +820,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             // Add warming effect from heat source
             baseTemperatureDelta += (short) Math.round(Math.min((double)7,(double) targetTemperature / (double)1800));
 
-            return new TempEffects(baseTemperatureDelta, swimMod, windMod, rainMod, altitudeMod, tileMod);
+            return new TempEffects(baseTemperatureDelta, swimMod, windMod, rainMod, tileMod);
         } catch (Exception e) {
             logger.log(Level.WARNING, e.getMessage());
             return null;
