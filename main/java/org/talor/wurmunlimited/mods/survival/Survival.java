@@ -32,7 +32,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
-public class Survival implements WurmServerMod, Configurable, ServerStartedListener, Initable, PreInitable {
+public class Survival implements WurmServerMod, Configurable, ServerStartedListener, Initable, PreInitable, PlayerMessageListener  {
 
     private static Logger logger = Logger.getLogger(Survival.class.getName());
 
@@ -66,6 +66,68 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
         northSouthMode = Boolean.parseBoolean(properties.getProperty("northSouthMode", Boolean.toString(northSouthMode)));
 
 	}
+
+    @Override
+    public boolean onPlayerMessage(Communicator communicator, String msg) {
+        if (msg.equals("/mytemp")) {
+
+            String commandMessage = communicator.getCommandMessage();
+            Player player = communicator.player;
+            if (commandMessage.charAt(0) == '/') {
+                if (enableTemperatureSurvival) {
+                    if (commandMessage.startsWith("/mytemp")) {
+                        TempEffects tempEffects = getTemperatureEffects(player);
+                        // Find average temperature and temperature delta, but do not apply wounds or generate warning messages
+                        tempEffects = pollBodyPartTemperature(player, false, false, tempEffects);
+                        String message = "";
+
+                        // Produce a user-friendly summary of temperature and temperature delta
+
+                        if (tempEffects.averageTemperature > 200) {
+                            message = message + "You are hot.";
+                        } else {
+                            if (tempEffects.averageTemperature == 0) {
+                                message = message + "You are freezing cold,";
+                            } else if (tempEffects.averageTemperature < 70) {
+                                message = message + "You are very cold,";
+                            } else if (tempEffects.averageTemperature < 130) {
+                                message = message + "You are cold,";
+                            } else if (tempEffects.averageTemperature < 180) {
+                                message = message + "You are warm,";
+                            } else {
+                                message = message + "You are very warm,";
+                            }
+
+                            if (tempEffects.averageModifiedTemperatureDelta == 0 || (tempEffects.averageTemperature < 130 && tempEffects.averageModifiedTemperatureDelta < 0) || (tempEffects.averageTemperature >= 130 && tempEffects.averageModifiedTemperatureDelta > 0)) {
+                                message = message + " and ";
+                            } else {
+                                message = message + " but ";
+                            }
+
+                            if (tempEffects.averageModifiedTemperatureDelta < -3) {
+                                message = message + "you are rapidly getting colder.";
+                            } else if (tempEffects.averageModifiedTemperatureDelta < 0) {
+                                message = message + "you are getting colder.";
+                            } else if (tempEffects.averageModifiedTemperatureDelta == 0) {
+                                message = message + "this is unlikely to change.";
+                            } else if (tempEffects.averageModifiedTemperatureDelta <= 3) {
+                                message = message + "you are getting warmer.";
+                            } else {
+                                message = message + "you are rapidly getting warmer.";
+                            }
+                        }
+
+                        player.getCommunicator().sendNormalServerMessage(message);
+
+                    }
+                }
+            }
+
+            return true;
+
+        }
+        return false;
+    }
 
 	@Override
 	public void preInit() {
@@ -118,93 +180,6 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                         }
 
                         return method.invoke(object, args);
-                    }
-                };
-            }
-        });
-
-
-        HookManager.getInstance().registerHook("com.wurmonline.server.creatures.Communicator", "sendSafeServerMessage", "(Ljava/lang/String;)V", new InvocationHandlerFactory() {
-
-            @Override
-            public InvocationHandler createInvocationHandler() {
-                return new InvocationHandler() {
-
-                    @Override
-                    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-                        String HoldSentText = (String) args[0];
-                        if (HoldSentText.startsWith("Unknown command: /mytemp")) {
-                            return null;
-                        }
-                        return method.invoke(proxy, args);
-                    }
-                };
-            }
-
-        });
-
-        HookManager.getInstance().registerHook("com.wurmonline.server.creatures.Communicator", "reallyHandle_CMD_MESSAGE", "(Ljava/nio/ByteBuffer;)V", new InvocationHandlerFactory() {
-
-            @Override
-            public InvocationHandler createInvocationHandler() {
-                return new InvocationHandler() {
-
-                    @Override
-                    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-                        method.invoke(proxy, args);
-                        Communicator ComObject = (Communicator) proxy;
-                        String commandMessage = ComObject.getCommandMessage();
-                        Player player = ComObject.player;
-                        if (commandMessage.charAt(0) == '/') {
-                            if (enableTemperatureSurvival) {
-                                if (commandMessage.startsWith("/mytemp")) {
-                                    TempEffects tempEffects = getTemperatureEffects(player);
-                                    // Find average temperature and temperature delta, but do not apply wounds or generate warning messages
-                                    tempEffects = pollBodyPartTemperature(player, false, false, tempEffects);
-                                    String message = "";
-
-                                    // Produce a user-friendly summary of temperature and temperature delta
-
-                                    if (tempEffects.averageTemperature > 200) {
-                                        message = message + "You are hot.";
-                                    } else {
-                                        if (tempEffects.averageTemperature == 0) {
-                                            message = message + "You are freezing cold,";
-                                        } else if (tempEffects.averageTemperature < 70) {
-                                            message = message + "You are very cold,";
-                                        } else if (tempEffects.averageTemperature < 130) {
-                                            message = message + "You are cold,";
-                                        } else if (tempEffects.averageTemperature < 180) {
-                                            message = message + "You are warm,";
-                                        } else {
-                                            message = message + "You are very warm,";
-                                        }
-
-                                        if (tempEffects.averageModifiedTemperatureDelta == 0 || (tempEffects.averageTemperature < 130 && tempEffects.averageModifiedTemperatureDelta < 0) || (tempEffects.averageTemperature >= 130 && tempEffects.averageModifiedTemperatureDelta > 0)) {
-                                            message = message + " and ";
-                                        } else {
-                                            message = message + " but ";
-                                        }
-
-                                        if (tempEffects.averageModifiedTemperatureDelta < -3) {
-                                            message = message + "you are rapidly getting colder.";
-                                        } else if (tempEffects.averageModifiedTemperatureDelta < 0) {
-                                            message = message + "you are getting colder.";
-                                        } else if (tempEffects.averageModifiedTemperatureDelta == 0) {
-                                            message = message + "this is unlikely to change.";
-                                        } else if (tempEffects.averageModifiedTemperatureDelta <= 3) {
-                                            message = message + "you are getting warmer.";
-                                        } else {
-                                            message = message + "you are rapidly getting warmer.";
-                                        }
-                                    }
-
-                                    player.getCommunicator().sendNormalServerMessage(message);
-
-                                }
-                            }
-                        }
-                        return null;
                     }
                 };
             }
