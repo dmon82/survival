@@ -69,58 +69,54 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
 
     @Override
     public boolean onPlayerMessage(Communicator communicator, String msg) {
-        if (msg.equals("/mytemp")) {
+        if (msg.startsWith("/mytemp")) {
 
             String commandMessage = communicator.getCommandMessage();
             Player player = communicator.player;
-            if (commandMessage.charAt(0) == '/') {
-                if (enableTemperatureSurvival) {
-                    if (commandMessage.startsWith("/mytemp")) {
-                        TempEffects tempEffects = getTemperatureEffects(player);
-                        // Find average temperature and temperature delta, but do not apply wounds or generate warning messages
-                        tempEffects = pollBodyPartTemperature(player, false, false, tempEffects);
-                        String message = "";
+            if (enableTemperatureSurvival) {
+                TempEffects tempEffects = getTemperatureEffects(player);
+                // Find average temperature and temperature delta, but do not apply wounds or generate warning messages
+                tempEffects = pollBodyPartTemperature(player, false, false, tempEffects);
+                String message = "";
 
-                        // Produce a user-friendly summary of temperature and temperature delta
+                // Produce a user-friendly summary of temperature and temperature delta
 
-                        if (tempEffects.averageTemperature > 200) {
-                            message = message + "You are hot.";
-                        } else {
-                            if (tempEffects.averageTemperature == 0) {
-                                message = message + "You are freezing cold,";
-                            } else if (tempEffects.averageTemperature < 70) {
-                                message = message + "You are very cold,";
-                            } else if (tempEffects.averageTemperature < 130) {
-                                message = message + "You are cold,";
-                            } else if (tempEffects.averageTemperature < 180) {
-                                message = message + "You are warm,";
-                            } else {
-                                message = message + "You are very warm,";
-                            }
+                if (tempEffects.averageTemperature > 200) {
+                    message = message + "You are hot.";
+                } else {
+                    if (tempEffects.averageTemperature == 0) {
+                        message = message + "You are freezing cold,";
+                    } else if (tempEffects.averageTemperature < 70) {
+                        message = message + "You are very cold,";
+                    } else if (tempEffects.averageTemperature < 130) {
+                        message = message + "You are cold,";
+                    } else if (tempEffects.averageTemperature < 180) {
+                        message = message + "You are warm,";
+                    } else {
+                        message = message + "You are very warm,";
+                    }
 
-                            if (tempEffects.averageModifiedTemperatureDelta == 0 || (tempEffects.averageTemperature < 130 && tempEffects.averageModifiedTemperatureDelta < 0) || (tempEffects.averageTemperature >= 130 && tempEffects.averageModifiedTemperatureDelta > 0)) {
-                                message = message + " and ";
-                            } else {
-                                message = message + " but ";
-                            }
+                    if (tempEffects.averageModifiedTemperatureDelta == 0 || (tempEffects.averageTemperature < 130 && tempEffects.averageModifiedTemperatureDelta < 0) || (tempEffects.averageTemperature >= 130 && tempEffects.averageModifiedTemperatureDelta > 0)) {
+                        message = message + " and ";
+                    } else {
+                        message = message + " but ";
+                    }
 
-                            if (tempEffects.averageModifiedTemperatureDelta < -3) {
-                                message = message + "you are rapidly getting colder.";
-                            } else if (tempEffects.averageModifiedTemperatureDelta < 0) {
-                                message = message + "you are getting colder.";
-                            } else if (tempEffects.averageModifiedTemperatureDelta == 0) {
-                                message = message + "this is unlikely to change.";
-                            } else if (tempEffects.averageModifiedTemperatureDelta <= 3) {
-                                message = message + "you are getting warmer.";
-                            } else {
-                                message = message + "you are rapidly getting warmer.";
-                            }
-                        }
-
-                        player.getCommunicator().sendNormalServerMessage(message);
-
+                    if (tempEffects.averageModifiedTemperatureDelta < -3) {
+                        message = message + "you are rapidly getting colder.";
+                    } else if (tempEffects.averageModifiedTemperatureDelta < 0) {
+                        message = message + "you are getting colder.";
+                    } else if (tempEffects.averageModifiedTemperatureDelta == 0) {
+                        message = message + "this is unlikely to change.";
+                    } else if (tempEffects.averageModifiedTemperatureDelta <= 3) {
+                        message = message + "you are getting warmer.";
+                    } else {
+                        message = message + "you are rapidly getting warmer.";
                     }
                 }
+
+                player.getCommunicator().sendNormalServerMessage(message);
+
             }
 
             return true;
