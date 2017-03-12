@@ -45,6 +45,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
     private boolean hardMode = false;
     private boolean enableCropSeasons = true;
     private boolean northSouthMode = true;
+    private float difficultySetting = 0;
 
     // List of body parts
     private byte[] bodyParts =  new byte[] { BodyTemplate.head, BodyTemplate.torso, BodyTemplate.leftArm, BodyTemplate.leftHand, BodyTemplate.rightArm, BodyTemplate.rightHand, BodyTemplate.legs, BodyTemplate.leftFoot, BodyTemplate.rightFoot  };
@@ -61,7 +62,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
         newPlayerProtection = Boolean.parseBoolean(properties.getProperty("newPlayerProtection", Boolean.toString(newPlayerProtection)));
         verboseLogging = Boolean.parseBoolean(properties.getProperty("verboseLogging", Boolean.toString(verboseLogging)));
         gmProtection = Boolean.parseBoolean(properties.getProperty("gmProtection", Boolean.toString(gmProtection)));
-        hardMode = Boolean.parseBoolean(properties.getProperty("hardMode", Boolean.toString(hardMode)));
+        difficultySetting = Float.parseFloat(properties.getProperty("difficultySetting", Float.toString(difficultySetting)));
         enableCropSeasons = Boolean.parseBoolean(properties.getProperty("enableCropSeasons", Boolean.toString(enableCropSeasons)));
         northSouthMode = Boolean.parseBoolean(properties.getProperty("northSouthMode", Boolean.toString(northSouthMode)));
 
@@ -756,7 +757,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
             double baseTemperatureDelta = getSimpleTemperature(player.getPosX(), player.getPosY(), player.isOnSurface());
 
             // Make it warmer if hardMode is disabled
-            if(!hardMode) baseTemperatureDelta++;
+            baseTemperatureDelta += difficultySetting;
             if (verboseLogging) logger.log(Level.INFO, player.getName() + " has following modifiers... northSouth mod: " + (4 * ((double)tileY /  (double)Server.surfaceMesh.getSize()) - 2)  + ", windMod : " + windMod + ", swimMod: " + swimMod + ", rainMod: " + rainMod + ", tileMod: " + tileMod + ", hardMode: " + hardMode + ", in cave: " + isInCave +  ", indoors: " + isIndoors + ", roof: " + isUnderRoof);
 
             // Search nearby for heat sources
