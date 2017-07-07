@@ -46,6 +46,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
     private boolean enableCropSeasons = true;
     private boolean northSouthMode = true;
     private float difficultySetting = 0;
+    private int maxWoundSize = 2000;
 
     // List of body parts
     private byte[] bodyParts =  new byte[] { BodyTemplate.head, BodyTemplate.torso, BodyTemplate.leftArm, BodyTemplate.leftHand, BodyTemplate.rightArm, BodyTemplate.rightHand, BodyTemplate.legs, BodyTemplate.leftFoot, BodyTemplate.rightFoot  };
@@ -63,6 +64,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
         verboseLogging = Boolean.parseBoolean(properties.getProperty("verboseLogging", Boolean.toString(verboseLogging)));
         gmProtection = Boolean.parseBoolean(properties.getProperty("gmProtection", Boolean.toString(gmProtection)));
         difficultySetting = Float.parseFloat(properties.getProperty("difficultySetting", Float.toString(difficultySetting)));
+        maxWoundSize = Integer.parseInt(properties.getProperty("maxWoundSize", Integer.toString(maxWoundSize)));
         enableCropSeasons = Boolean.parseBoolean(properties.getProperty("enableCropSeasons", Boolean.toString(enableCropSeasons)));
         northSouthMode = Boolean.parseBoolean(properties.getProperty("northSouthMode", Boolean.toString(northSouthMode)));
 
@@ -655,7 +657,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                     // Give the player some cold wounds if they are freezing and display a warning message
                     if (applyTemperatureAndWounds && temperature == 0) {
                         if (Server.rand.nextInt(1000) > 750) {
-                            int dmg = Server.rand.nextInt(2000);
+                            int dmg = Server.rand.nextInt(maxWoundSize);
                             // Only apply wounds every other poll
                             if (player.secondsPlayed % 30.0F == 0.0F) {
                                 player.addWoundOfType(null, (byte) 8, y, false, 1.0F, false, dmg);
