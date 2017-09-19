@@ -25,6 +25,7 @@ import org.gotti.wurmunlimited.modloader.classhooks.InvocationHandlerFactory;
 import org.gotti.wurmunlimited.modloader.interfaces.*;
 
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.Properties;
@@ -226,8 +227,8 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                         Creature player = (Creature) args[1];
                         Item drink = (Item) args[2];
 
-                        // Drinking hot drinks warms player up
-                        if (enableTemperatureSurvival && !result && player.isPlayer() && act.currentSecond() % 2 == 0 && drink.getTemperature() > 600) {
+                        // Drinking hot drinks (or vodka) warms player up
+                        if (enableTemperatureSurvival && !result && player.isPlayer() && act.currentSecond() % 2 == 0 && (drink.getTemperature() > 600 || drink.getTemplateId() == 1231) ) {
                             warmAllBodyParts((Player)player, (short)5);
                             player.getCommunicator().sendNormalServerMessage("The " + drink.getName() + " warms you up.");
                             if (verboseLogging) logger.log(Level.INFO, player.getName() + " is warmed by drinking some " + drink.getName());
@@ -445,8 +446,6 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
                 };
             }
         });
-
-
 
     }
 
