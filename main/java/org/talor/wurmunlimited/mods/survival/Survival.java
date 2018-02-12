@@ -755,7 +755,7 @@ public class Survival implements WurmServerMod, Configurable, ServerStartedListe
 
             // Positive value indicates warming, negative value indicates cooling
             // Produces within a rough range of -10 to 5
-            double baseTemperatureDelta = getSimpleTemperature(player.getPosX(), player.getPosY(), player.isOnSurface());
+            double baseTemperatureDelta = getSimpleTemperature(tileX, tileY, player.isOnSurface());
 
             // Make it warmer if hardMode is disabled
             baseTemperatureDelta += difficultySetting;
